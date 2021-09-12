@@ -13,7 +13,7 @@ exports.getBootcamps = asyncHandler(async (req, res, next) => {
   const reqQuery = { ...req.query };
 
   // Fields to exclude
-  const removeFields = ['select', 'sort'];
+  const removeFields = ['select', 'sort', 'limit', 'page'];
 
   // Loop over removeFields and delete them from reqQuery
   removeFields.forEach((param) => delete reqQuery[param]);
@@ -36,20 +36,51 @@ exports.getBootcamps = asyncHandler(async (req, res, next) => {
     query = query.select(fields);
   }
 
-  // Soprt
+  // Sort
   if (req.query.sort) {
     const sortBy = req.query.sort.split(',').join(' ');
     query = query.sort(sortBy);
   } else {
-    query = query.sort('-createdAt');
+    query = query.sort({ "createdAt": 'asc', name: -1 });
   }
+
+  // Pagination
+  const page = parseInt(req.query.page, 10) || 1;
+  const limit = parseInt(req.query.limit, 10) || 25;
+  const startIndex = (page - 1) * limit;
+  const endIndex = page * limit;
+  const total = await Bootcamp.countDocuments(reqQuery);
+
+  query = query.skip(startIndex).limit(limit);
 
   // Executing query
   const bootcamps = await query;
 
+  // Pagination result
+  const pagination = {};
+
+  if (endIndex < total) {
+    pagination.next = {
+      page: page + 1,
+      limit
+    };
+  }
+
+  if (startIndex > 0) {
+    pagination.prev = {
+      page: page - 1,
+      limit
+    };
+  }
+
   res
     .status(200)
-    .json({ success: true, count: bootcamps.length, data: bootcamps });
+    .json({
+      success: true,
+      count: bootcamps.length,
+      pagination,
+      data: bootcamps
+    });
 });
 
 // @desc    Get single bootcamp
@@ -75,7 +106,7 @@ exports.createBootcamp = asyncHandler(async (req, res, next) => {
 
   res.status(201).json({
     success: true,
-    data: bootcamp,
+    data: bootcamp
   });
 });
 
@@ -85,7 +116,7 @@ exports.createBootcamp = asyncHandler(async (req, res, next) => {
 exports.updateBootcamp = asyncHandler(async (req, res, next) => {
   const bootcamp = await Bootcamp.findByIdAndUpdate(req.params.id, req.body, {
     new: true,
-    runValidators: true,
+    runValidators: true
   });
 
   if (!bootcamp) {
@@ -135,6 +166,6 @@ exports.getBootcampsInRadius = asyncHandler(async (req, res, next) => {
   res.status(200).json({
     success: true,
     count: bootcamps.length,
-    data: bootcamps,
+    data: bootcamps
   });
 });
