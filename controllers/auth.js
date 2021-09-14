@@ -18,7 +18,7 @@ exports.register = asyncHandler(async (req, res, next) => {
 
   sentTokenResponse(user, 200, res);
 
-  res.status(200).json({ success: true, token });
+  // res.status(200).json({ success: true, token });
 });
 
 // @desc    Login User
